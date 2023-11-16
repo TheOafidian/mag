@@ -258,6 +258,7 @@ workflow MAG {
             ch_versions = ch_versions
         }
         ch_bowtie2_removal_host_multiqc = Channel.empty()
+        
         if (params.host_fasta || params.host_genome){
             BOWTIE2_HOST_REMOVAL_ALIGN (
                 ch_short_reads_prepped,
@@ -269,7 +270,7 @@ workflow MAG {
         } else if (params.use_hostile) {
 
             HOSTILE_FILTER_HOST_READS (
-            ch_host_fasta
+            ch_short_reads_prepped
             )  
             ch_short_reads_hostremoved = HOSTILE_FILTER_HOST_READS.out.host_removed
             ch_versions = ch_versions.mix(HOSTILE_FILTER_HOST_READS.out.versions.first())
