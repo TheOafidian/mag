@@ -255,7 +255,6 @@ workflow MAG {
                 ch_host_fasta
             )
             ch_host_bowtie2index = BOWTIE2_HOST_REMOVAL_BUILD.out.index
-            ch_short_reads_hostremoved = HOSTILE_FILTER_HOST_READS.out.host_removed
             ch_versions = ch_versions
         }
         ch_bowtie2_removal_host_multiqc = Channel.empty()
