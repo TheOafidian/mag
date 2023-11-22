@@ -9,6 +9,8 @@ process HOSTILE_FILTER_HOST_READS {
     'https://depot.galaxyproject.org/singularity/hostile:0.0.2--pyhdfd78af_0':
     'quay.io/biocontainers/hostile:0.1.0--pyhdfd78af_0'}"
 
+    publishDir "${params.outdir}/hostremoved"
+
     input:
     tuple val(meta), path(reads)
 
