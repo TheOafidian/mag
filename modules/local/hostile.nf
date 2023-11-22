@@ -7,7 +7,7 @@ process HOSTILE_FILTER_HOST_READS {
     conda "bioconda::hostile=0.2.0"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singulairty_pull_docker_container ? 
     'https://depot.galaxyproject.org/singularity/hostile:0.0.2--pyhdfd78af_0':
-    'quay.io/biocontainers/hostile:0.1.0--pyhdfd78af_0'}"
+    'quay.io/biocontainers/hostile:0.2.0--pyhdfd78af_0'}"
 
     publishDir "${params.outdir}/hostremoved"
 
