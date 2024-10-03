@@ -56,6 +56,7 @@ include { METAEUK_EASYPREDICT                                   } from '../modul
 //
 // MODULE: Local to the pipeline
 //
+include { HOSTILE_FILTER_HOST_READS                           } from '../modules/local/hostile' 
 include { BOWTIE2_REMOVAL_BUILD as BOWTIE2_HOST_REMOVAL_BUILD } from '../modules/local/bowtie2_removal_build'
 include { BOWTIE2_REMOVAL_ALIGN as BOWTIE2_HOST_REMOVAL_ALIGN } from '../modules/local/bowtie2_removal_align'
 include { BOWTIE2_REMOVAL_BUILD as BOWTIE2_PHIX_REMOVAL_BUILD } from '../modules/local/bowtie2_removal_build'
@@ -250,10 +251,11 @@ workflow MAG {
         }
 
         if (params.host_fasta){
-            BOWTIE2_HOST_REMOVAL_BUILD (
+            HOSTILE_FILTER_HOST_READS (
                 ch_host_fasta
             )
-            ch_host_bowtie2index = BOWTIE2_HOST_REMOVAL_BUILD.out.index
+            ch_short_reads_hostremoved = HOSTILE_FILTER_HOST_READS.out.host_removed
+            ch_versions = ch_versions
         }
         ch_bowtie2_removal_host_multiqc = Channel.empty()
         if (params.host_fasta || params.host_genome){
@@ -264,7 +266,14 @@ workflow MAG {
             ch_short_reads_hostremoved = BOWTIE2_HOST_REMOVAL_ALIGN.out.reads
             ch_bowtie2_removal_host_multiqc = BOWTIE2_HOST_REMOVAL_ALIGN.out.log
             ch_versions = ch_versions.mix(BOWTIE2_HOST_REMOVAL_ALIGN.out.versions.first())
-        } else {
+        } else if (params.use_hostile) {
+
+            HOSTILE_FILTER_HOST_READS (
+            ch_host_fasta
+            )  
+            ch_short_reads_hostremoved = HOSTILE_FILTER_HOST_READS.out.host_removed
+            ch_versions = ch_versions.mix(HOSTILE_FILTER_HOST_READS.out.versions.first())
+        } else {    
             ch_short_reads_hostremoved = ch_short_reads_prepped
         }
 
