@@ -3,6 +3,147 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 3.0.3 [2024-08-27]
+
+### `Added`
+
+### `Changed`
+
+### `Fixed`
+
+- [#648](https://github.com/nf-core/mag/pull/648) - Fix sample ID/assembly ID check failure when no IDs match (reported by @zackhenny, fix by @prototaxites)
+- [#646](https://github.com/nf-core/mag/pull/646) - GTDB-Tk directory input now creates a value channel so it runs for all entries to the process and not just the first (reported by @amizeranschi, fix by @prototaxites).
+- [#639](https://github.com/nf-core/mag/pull/639) - Fix pipeline failure when a sample produces only a single bin (fix by @d-callan)
+- [#651](https://github.com/nf-core/mag/pull/651) - Replace base container for bash only modules to reduce number of containers in pipeline (reported and fixed by @harper357)
+- [#652](https://github.com/nf-core/mag/pull/652) - Fix documentation typo in using user-defined assembly parameters (reported and fixed by @amizeranschi)
+- [#653](https://github.com/nf-core/mag/pull/653) - Fix overwriting of per-bin 'raw' GUNC RUN output files (multi-bin summary tables not affected) (reported by @zackhenny and fixed by @jfy133)
+
+### `Dependencies`
+
+### `Deprecated`
+
+## 3.0.2 [2024-07-04]
+
+### `Added`
+
+### `Changed`
+
+- [#633](https://github.com/nf-core/mag/pull/633/) - Changed BUSCO to use offline mode when the database is specified by the user (reported by @ChristophKnapp and many others, fix by @jfy133)
+- [#632](https://github.com/nf-core/mag/pull/632) - Use default NanoLyse log of just removed reads rather than custom (by @jfy133)
+
+### `Fixed`
+
+- [#630](https://github.com/nf-core/mag/pull/630) - Fix CONCOCT empty bins killing the pipeline, and allow for true multithreading again (removing OPENBLAS loop) (reported by @maxibor, fix by @maxibor and @jfy133)
+
+### `Dependencies`
+
+| Tool     | Previous version | New version |
+| -------- | ---------------- | ----------- |
+| Porechop | 0.2.3_seqan2.1.1 | 0.2.4       |
+| NanoPlot | 1.26.3           | 1.41.6      |
+| NanoLyse | 1.1.0            | 1.2.0       |
+
+### `Deprecated`
+
+## 3.0.1 [2024-06-10]
+
+### `Added`
+
+### `Changed`
+
+- [#625](https://github.com/nf-core/mag/pull/625) - Updated link to geNomad database for downloading (reported by @amizeranschi, fix by @jfy133)
+
+### `Fixed`
+
+- [#618](https://github.com/nf-core/mag/pull/618) - Fix CENTRIFUGE mkfifo failures by using work directory /tmp (reported by @skrakau, fix by @jfy133)
+
+### `Dependencies`
+
+| Tool       | Previous version | New version |
+| ---------- | ---------------- | ----------- |
+| Centrifuge | 1.0.4_beta       | 1.0.4.1     |
+
+### `Deprecated`
+
+## 3.0.0 - [2024-05-13]
+
+### `Added`
+
+- [#615](https://github.com/nf-core/mag/pull/615) - Add new logo (by @jfy133)
+
+### `Changed`
+
+- [#599](https://github.com/nf-core/mag/pull/599) - Update to nf-core v2.13.1 `TEMPLATE` (by @jfy133)
+- [#614](https://github.com/nf-core/mag/pull/614) - Update to nf-core v2.14.1 `TEMPLATE` (by @jfy133)
+
+### `Fixed`
+
+- [#606](https://github.com/nf-core/mag/pull/606) - Prevent pipeline crash when premade mashdb given to or no alignments found with GTDB-TK_CLASSIFYWF (reported by @cedwardson4, fix by @jfy133)
+
+### `Dependencies`
+
+### `Deprecated`
+
+- [#599](https://github.com/nf-core/mag/pull/599) - Direct reads input (`--input 'sample_{R1,R2}.fastq.gz'`) is no longer supported, all input must come via samplesheets (by @jfy133)
+
+## 2.5.4 - [2024-02-12]
+
+### `Added`
+
+### `Changed`
+
+- [#581](https://github.com/nf-core/mag/pull/581) - Added explicit licence text to headers of all custom scripts (reported by @FriederikeHanssen and @maxibor, fix by @jfy133)
+- [#602](https://github.com/nf-core/mag/pull/602) - Co-binning when using aDNA mode now enabled (added by @maxibor)
+
+### `Fixed`
+
+- [#583](https://github.com/nf-core/mag/pull/583) - Fix GTDB database input when directory supplied (fix by @jfy133)
+
+### `Dependencies`
+
+### `Deprecated`
+
+## 2.5.3 - [2024-02-05]
+
+### `Added`
+
+### `Changed`
+
+- [#575](https://github.com/nf-core/mag/pull/575) - Deactivated MetaSPAdes, Centrifuge, and GTDB in test_full profile due to some container incompatibilities in nf-core megatest AWS configurations (by @jfy133)
+
+### `Fixed`
+
+- [#574](https://github.com/nf-core/mag/pull/574) - Fix wrong channel going to BIN_SUMMARY (fix by @maxibor)
+
+### `Dependencies`
+
+### `Deprecated`
+
+## 2.5.2 - [2024-02-02]
+
+### `Added`
+
+- [#562](https://github.com/nf-core/mag/pull/562) - Add CAT summary into the global bin_summary (by @maxibor)
+- [#565](https://github.com/nf-core/mag/pull/565) - Add warning of empty GTDB-TK results if no contigs pass completeness filter (by @jfy133 and @maxibor)
+
+### `Changed`
+
+- [#563](https://github.com/nf-core/mag/pull/562) - Update to nf-core v2.12 `TEMPLATE` (by @CarsonJM)
+- [#566](https://github.com/nf-core/mag/pull/566) - More logical ordering of MultiQC sections (assembly and bin sections go together respectively) (fix by @jfy133)
+
+### `Fixed`
+
+- [#548](https://github.com/nf-core/mag/pull/548) - Fixes to (reported by @maxibor, @PPpissar, @muniheart, @llborcard, fix by @maxibor)
+  - GTDBK-TK execution
+  - CAT/QUAST/DEPTH bin summary file name collisions
+  - BUSCO database parsing
+  - Correct CAT name files
+- [#558](https://github.com/nf-core/mag/pull/558) - Fix bug in run merging when dealing with single end data (reported by @roberta-davidson, fix by @jfy133)
+
+### `Dependencies`
+
+### `Deprecated`
+
 ## 2.5.1 - [2023-11-17]
 
 ### `Added`
@@ -11,9 +152,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### `Fixed`
 
-- [#489](https://github.com/nf-core/mag/pull/489) Fix file name collision clashes for CHECKM, CAT, GTDBTK, and QUAST (reported by @tillenglert and @maxibor, fix by @maxibor)
-- [#533](https://github.com/nf-core/mag/pull/533) Fix glob pattern for publishing MetaBAT2 bins in results (reported by @patriciatran, fix by @jfy133)
-- [#535](https://github.com/nf-core/mag/pull/535) Fix input validation pattern to again allow direct FASTQ input (reported by @lennijusten, @emnilsson, fix by @jfy133, @d4straub, @mahesh-panchal, @nvnieuwk)
+- [#489](https://github.com/nf-core/mag/pull/489) - Fix file name collision clashes for CHECKM, CAT, GTDBTK, and QUAST (reported by @tillenglert and @maxibor, fix by @maxibor)
+- [#533](https://github.com/nf-core/mag/pull/533) - Fix glob pattern for publishing MetaBAT2 bins in results (reported by @patriciatran, fix by @jfy133)
+- [#535](https://github.com/nf-core/mag/pull/535) - Fix input validation pattern to again allow direct FASTQ input (reported by @lennijusten, @emnilsson, fix by @jfy133, @d4straub, @mahesh-panchal, @nvnieuwk)
 
 ### `Dependencies`
 
@@ -23,7 +164,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### `Deprecated`
 
-- [#536](https://github.com/nf-core/mag/pull/536) Remove custom function with native Nextflow for checking file extension (reported by @d4straub, fix by @jfy133)
+- [#536](https://github.com/nf-core/mag/pull/536) - Remove custom function with native Nextflow for checking file extension (reported by @d4straub, fix by @jfy133)
 
 ## 2.5.0 - [2023-10-10]
 

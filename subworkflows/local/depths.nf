@@ -10,6 +10,14 @@ def getColNo(filename) {
     return lines[0].split('\t').size()
 }
 
+/*
+ * Get number of rows in a file
+ */
+def getRowNo(filename) {
+    lines = file(filename).readLines()
+    return lines.size()
+}
+
 workflow DEPTHS {
     take:
     bins_unbins     //channel: val(meta), [ path(bins) ]
@@ -18,9 +26,6 @@ workflow DEPTHS {
 
     main:
     ch_versions = Channel.empty()
-
-
-    depths.dump(tag: 'depths', pretty: true)
 
     // Compute bin depths for different samples (according to `binning_map_mode`)
     // Create a new meta combine key first, but copy meta so that
@@ -56,13 +61,22 @@ workflow DEPTHS {
         .collectFile(name:'sample_groups.tsv'){ meta, reads -> meta.id + '\t' + meta.group + '\n' }
 
     // Filter MAG depth files: use only those for plotting that contain depths for > 2 samples
+    // as well as > 2 bins
     ch_mag_depths_plot = MAG_DEPTHS.out.depths
         .map { meta, bin_depths_file ->
-            if (getColNo(bin_depths_file) > 2) [ meta, bin_depths_file ]
+            if (getColNo(bin_depths_file) > 2 && getRowNo(bin_depths_file) > 2) [ meta, bin_depths_file ]
         }
 
     MAG_DEPTHS_PLOT ( ch_mag_depths_plot, ch_sample_groups.collect() )
-    MAG_DEPTHS_SUMMARY ( MAG_DEPTHS.out.depths.map{it[1]}.collect() )
+
+    //Depth files that are coming from bins and failed binning refinement are concatenated per meta
+    ch_mag_depth_out = MAG_DEPTHS.out.depths
+        .collectFile(keepHeader: true) {
+            meta, depth ->
+            [meta.id, depth]
+        }
+
+    MAG_DEPTHS_SUMMARY ( ch_mag_depth_out.collect() )
     ch_versions = ch_versions.mix( MAG_DEPTHS_PLOT.out.versions )
     ch_versions = ch_versions.mix( MAG_DEPTHS_SUMMARY.out.versions )
 

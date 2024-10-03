@@ -25,7 +25,8 @@ workflow GTDBTK {
                         def completeness  = -1
                         def contamination = -1
                         def missing, duplicated
-                        if (params.busco_db.getBaseName().contains('odb10')) {
+                        def busco_db = file(params.busco_db)
+                        if (busco_db.getBaseName().contains('odb10')) {
                             missing    = row.'%Missing (specific)'      // TODO or just take '%Complete'?
                             duplicated = row.'%Complete and duplicated (specific)'
                         } else {
@@ -52,7 +53,7 @@ workflow GTDBTK {
     ch_filtered_bins = bins
         .transpose()
         .map { meta, bin -> [bin.getName(), bin, meta]}
-        .join(ch_bin_metrics, failOnDuplicate: true, failOnMismatch: true)
+        .join(ch_bin_metrics, failOnDuplicate: true)
         .map { bin_name, bin, meta, completeness, contamination -> [meta, bin, completeness, contamination] }
         .branch {
             passed: (it[2] != -1 && it[2] >= params.gtdbtk_min_completeness && it[3] != -1 && it[3] <= params.gtdbtk_max_contamination)
@@ -65,16 +66,26 @@ workflow GTDBTK {
         // Expects to be tar.gz!
         ch_db_for_gtdbtk = GTDBTK_DB_PREPARATION ( gtdb ).db
     } else if ( gtdb.isDirectory() ) {
-        // Make up meta id to match expected channel cardinality for GTDBTK
+        // The classifywf module expects a list of the _contents_ of the GTDB
+        // database, not just the directory itself (I'm not sure why). But
+        // for now we generate this list before putting into a channel,
+        // then grouping again to pass to the module.
+        // Then make up meta id to match expected channel cardinality for GTDBTK
+        gtdb_dir = gtdb.listFiles()
         ch_db_for_gtdbtk = Channel
-                            .of(gtdb)
-                            .map{
-                                [ it.toString().split('/').last(), it ]
-                            }
+                            .of(gtdb_dir)
                             .collect()
+                            .map { ["gtdb", it] }
     } else {
         error("Unsupported object given to --gtdb, database must be supplied as either a directory or a .tar.gz file!")
     }
+
+
+    // Print warning why GTDB-TK summary empty if passed channel gets no files
+    ch_filtered_bins.passed
+        .count()
+        .map{it == 0 ? log.warn("No contigs passed GTDB-TK min. completeness filters. GTDB-TK summary will execute but results will be empty!") : ""}
+
 
     GTDBTK_CLASSIFYWF (
         ch_filtered_bins.passed.groupTuple(),
@@ -84,11 +95,9 @@ workflow GTDBTK {
 
     GTDBTK_SUMMARY (
         ch_filtered_bins.discarded.map{it[1]}.collect().ifEmpty([]),
-        GTDBTK_CLASSIFYWF.out.summary.collect().ifEmpty([]),
+        GTDBTK_CLASSIFYWF.out.summary.map{it[1]}.collect().ifEmpty([]),
         [],
-        // GTDBTK_CLASSIFYWF.out.filtered.collect().ifEmpty([]),
         []
-        // GTDBTK_CLASSIFYWF.out.failed.collect().ifEmpty([])
     )
 
     emit:

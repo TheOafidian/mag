@@ -12,7 +12,14 @@ workflow ANCIENT_DNA_ASSEMBLY_VALIDATION {
     main:
         ch_versions = Channel.empty()
 
-        PYDAMAGE_ANALYZE(input.map {item -> [item[0], item[2], item[3]]})
+        PYDAMAGE_ANALYZE(
+            input.map {
+                meta, contigs, bam, bai -> [
+                    meta, bam[0], bai[0]
+                ]
+            }
+        )
+
         PYDAMAGE_FILTER(PYDAMAGE_ANALYZE.out.csv)
         ch_versions = ch_versions.mix(PYDAMAGE_ANALYZE.out.versions.first())
 
@@ -29,9 +36,9 @@ workflow ANCIENT_DNA_ASSEMBLY_VALIDATION {
                                         fasta: [ contigs ]
                                         fai: [ fai ]
                                 }
-            FREEBAYES ( freebayes_input.reads.dump(tag: 'reads'),
-                        freebayes_input.fasta.dump(tag: 'fasta'),
-                        freebayes_input.fai.dump(tag: 'fai'),
+            FREEBAYES ( freebayes_input.reads,
+                        freebayes_input.fasta,
+                        freebayes_input.fai,
                         [],
                         [],
                         [] )

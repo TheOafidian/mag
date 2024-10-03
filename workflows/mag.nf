@@ -1,93 +1,18 @@
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    PRINT PARAMS SUMMARY
+    IMPORT MODULES / SUBWORKFLOWS / FUNCTIONS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { paramsSummaryLog; paramsSummaryMap } from 'plugin/nf-validation'
-
-def logo = NfcoreTemplate.logo(workflow, params.monochrome_logs)
-def citation = '\n' + WorkflowMain.citation(workflow) + '\n'
-def summary_params = paramsSummaryMap(workflow)
-
-// Check already if long reads are provided
-def hybrid = false
-if(file(params.input).extension == 'csv'){
-    Channel
-        .from(file(params.input))
-        .splitCsv(header: true)
-        .map { row ->
-                if (row.long_reads) hybrid = true
-            }
-}
-
-// Print parameter summary log to screen
-log.info logo + paramsSummaryLog(workflow) + citation
-
-// Validate input parameters
-WorkflowMag.initialise(params, log, hybrid)
-
-// Check input path parameters to see if they exist
-def checkPathParamList = [ params.input, params.multiqc_config, params.phix_reference, params.host_fasta, params.centrifuge_db, params.kraken2_db, params.cat_db, params.krona_db, params.gtdb_db, params.lambda_reference, params.busco_db ]
-for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
-
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    CONFIG FILES
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
-
-ch_multiqc_config          = Channel.fromPath("$projectDir/assets/multiqc_config.yml", checkIfExists: true)
-ch_multiqc_custom_config   = params.multiqc_config ? Channel.fromPath( params.multiqc_config, checkIfExists: true ) : Channel.empty()
-ch_multiqc_logo            = params.multiqc_logo   ? Channel.fromPath( params.multiqc_logo, checkIfExists: true ) : Channel.fromPath("$projectDir/assets/nf-core-mag_logo_light.png")
-ch_multiqc_custom_methods_description = params.multiqc_methods_description ? file(params.multiqc_methods_description, checkIfExists: true) : file("$projectDir/assets/methods_description_template.yml", checkIfExists: true)
-
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    IMPORT LOCAL MODULES/SUBWORKFLOWS
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
-
-//
-// MODULE: Local to the pipeline
-//
-include { HOSTILE_FILTER_HOST_READS                           } from '../modules/local/hostile'
-include { BOWTIE2_REMOVAL_BUILD as BOWTIE2_HOST_REMOVAL_BUILD } from '../modules/local/bowtie2_removal_build'
-include { BOWTIE2_REMOVAL_ALIGN as BOWTIE2_HOST_REMOVAL_ALIGN } from '../modules/local/bowtie2_removal_align'
-include { BOWTIE2_REMOVAL_BUILD as BOWTIE2_PHIX_REMOVAL_BUILD } from '../modules/local/bowtie2_removal_build'
-include { BOWTIE2_REMOVAL_ALIGN as BOWTIE2_PHIX_REMOVAL_ALIGN } from '../modules/local/bowtie2_removal_align'
-include { PORECHOP                                            } from '../modules/local/porechop'
-include { NANOLYSE                                            } from '../modules/local/nanolyse'
-include { FILTLONG                                            } from '../modules/local/filtlong'
-include { NANOPLOT as NANOPLOT_RAW                            } from '../modules/local/nanoplot'
-include { NANOPLOT as NANOPLOT_FILTERED                       } from '../modules/local/nanoplot'
-include { CENTRIFUGE_DB_PREPARATION                           } from '../modules/local/centrifuge_db_preparation'
-include { CENTRIFUGE                                          } from '../modules/local/centrifuge'
-include { KRAKEN2_DB_PREPARATION                              } from '../modules/local/kraken2_db_preparation'
-include { KRAKEN2                                             } from '../modules/local/kraken2'
-include { KRONA_DB                                            } from '../modules/local/krona_db'
-include { KRONA                                               } from '../modules/local/krona'
-include { POOL_SINGLE_READS as POOL_SHORT_SINGLE_READS        } from '../modules/local/pool_single_reads'
-include { POOL_PAIRED_READS                                   } from '../modules/local/pool_paired_reads'
-include { POOL_SINGLE_READS as POOL_LONG_READS                } from '../modules/local/pool_single_reads'
-include { MEGAHIT                                             } from '../modules/local/megahit'
-include { SPADES                                              } from '../modules/local/spades'
-include { SPADESHYBRID                                        } from '../modules/local/spadeshybrid'
-include { GUNZIP as GUNZIP_ASSEMBLIES                         } from '../modules/nf-core/gunzip'
-include { QUAST                                               } from '../modules/local/quast'
-include { QUAST_BINS                                          } from '../modules/local/quast_bins'
-include { QUAST_BINS_SUMMARY                                  } from '../modules/local/quast_bins_summary'
-include { CAT_DB                                              } from '../modules/local/cat_db'
-include { CAT_DB_GENERATE                                     } from '../modules/local/cat_db_generate'
-include { CAT                                                 } from '../modules/local/cat'
-include { CAT_SUMMARY                                         } from "../modules/local/cat_summary"
-include { BIN_SUMMARY                                         } from '../modules/local/bin_summary'
-include { COMBINE_TSV as COMBINE_SUMMARY_TSV                  } from '../modules/local/combine_tsv'
+include { MULTIQC                } from '../modules/nf-core/multiqc/main'
+include { paramsSummaryMap       } from 'plugin/nf-validation'
+include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
+include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
+include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_mag_pipeline'
 
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
 //
-include { INPUT_CHECK                     } from '../subworkflows/local/input_check'
 include { BINNING_PREPARATION             } from '../subworkflows/local/binning_preparation'
 include { BINNING                         } from '../subworkflows/local/binning'
 include { BINNING_REFINEMENT              } from '../subworkflows/local/binning_refinement'
@@ -100,30 +25,60 @@ include { ANCIENT_DNA_ASSEMBLY_VALIDATION } from '../subworkflows/local/ancient_
 include { DOMAIN_CLASSIFICATION           } from '../subworkflows/local/domain_classification'
 include { DEPTHS                          } from '../subworkflows/local/depths'
 
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    IMPORT NF-CORE MODULES/SUBWORKFLOWS
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
-
 //
 // MODULE: Installed directly from nf-core/modules
 //
-include { ARIA2 as ARIA2_UNTAR                   } from '../modules/nf-core/aria2/main'
-include { FASTQC as FASTQC_RAW                   } from '../modules/nf-core/fastqc/main'
-include { FASTQC as FASTQC_TRIMMED               } from '../modules/nf-core/fastqc/main'
-include { SEQTK_MERGEPE                          } from '../modules/nf-core/seqtk/mergepe/main'
-include { BBMAP_BBNORM                           } from '../modules/nf-core/bbmap/bbnorm/main'
-include { FASTP                                  } from '../modules/nf-core/fastp/main'
-include { ADAPTERREMOVAL as ADAPTERREMOVAL_PE    } from '../modules/nf-core/adapterremoval/main'
-include { ADAPTERREMOVAL as ADAPTERREMOVAL_SE    } from '../modules/nf-core/adapterremoval/main'
-include { CAT_FASTQ                              } from '../modules/nf-core/cat/fastq/main'
-include { PRODIGAL                               } from '../modules/nf-core/prodigal/main'
-include { PROKKA                                 } from '../modules/nf-core/prokka/main'
-include { MMSEQS_DATABASES                       } from '../modules/nf-core/mmseqs/databases/main'
-include { METAEUK_EASYPREDICT                    } from '../modules/nf-core/metaeuk/easypredict/main'
-include { CUSTOM_DUMPSOFTWAREVERSIONS            } from '../modules/nf-core/custom/dumpsoftwareversions/main'
-include { MULTIQC                                } from '../modules/nf-core/multiqc/main'
+include { ARIA2 as ARIA2_UNTAR                                  } from '../modules/nf-core/aria2/main'
+include { FASTQC as FASTQC_RAW                                  } from '../modules/nf-core/fastqc/main'
+include { FASTQC as FASTQC_TRIMMED                              } from '../modules/nf-core/fastqc/main'
+include { SEQTK_MERGEPE                                         } from '../modules/nf-core/seqtk/mergepe/main'
+include { PORECHOP_PORECHOP                                     } from '../modules/nf-core/porechop/porechop/main'
+include { NANOPLOT as NANOPLOT_RAW                              } from '../modules/nf-core/nanoplot/main'
+include { NANOPLOT as NANOPLOT_FILTERED                         } from '../modules/nf-core/nanoplot/main'
+include { NANOLYSE                                              } from '../modules/nf-core/nanolyse/main'
+include { BBMAP_BBNORM                                          } from '../modules/nf-core/bbmap/bbnorm/main'
+include { FASTP                                                 } from '../modules/nf-core/fastp/main'
+include { ADAPTERREMOVAL as ADAPTERREMOVAL_PE                   } from '../modules/nf-core/adapterremoval/main'
+include { ADAPTERREMOVAL as ADAPTERREMOVAL_SE                   } from '../modules/nf-core/adapterremoval/main'
+include { UNTAR as CENTRIFUGEDB_UNTAR                           } from '../modules/nf-core/untar/main'
+include { CENTRIFUGE_CENTRIFUGE                                 } from '../modules/nf-core/centrifuge/centrifuge/main'
+include { CENTRIFUGE_KREPORT                                    } from '../modules/nf-core/centrifuge/kreport/main'
+include { KRONA_KRONADB                                         } from '../modules/nf-core/krona/kronadb/main'
+include { KRONA_KTIMPORTTAXONOMY                                } from '../modules/nf-core/krona/ktimporttaxonomy/main'
+include { KRAKENTOOLS_KREPORT2KRONA as KREPORT2KRONA_CENTRIFUGE } from '../modules/nf-core/krakentools/kreport2krona/main'
+include { CAT_FASTQ                                             } from '../modules/nf-core/cat/fastq/main'
+include { GUNZIP as GUNZIP_ASSEMBLIES                           } from '../modules/nf-core/gunzip'
+include { PRODIGAL                                              } from '../modules/nf-core/prodigal/main'
+include { PROKKA                                                } from '../modules/nf-core/prokka/main'
+include { MMSEQS_DATABASES                                      } from '../modules/nf-core/mmseqs/databases/main'
+include { METAEUK_EASYPREDICT                                   } from '../modules/nf-core/metaeuk/easypredict/main'
+
+//
+// MODULE: Local to the pipeline
+//
+include { HOSTILE_FILTER_HOST_READS                           } from '../modules/local/hostile' 
+include { BOWTIE2_REMOVAL_BUILD as BOWTIE2_HOST_REMOVAL_BUILD } from '../modules/local/bowtie2_removal_build'
+include { BOWTIE2_REMOVAL_ALIGN as BOWTIE2_HOST_REMOVAL_ALIGN } from '../modules/local/bowtie2_removal_align'
+include { BOWTIE2_REMOVAL_BUILD as BOWTIE2_PHIX_REMOVAL_BUILD } from '../modules/local/bowtie2_removal_build'
+include { BOWTIE2_REMOVAL_ALIGN as BOWTIE2_PHIX_REMOVAL_ALIGN } from '../modules/local/bowtie2_removal_align'
+include { FILTLONG                                            } from '../modules/local/filtlong'
+include { KRAKEN2_DB_PREPARATION                              } from '../modules/local/kraken2_db_preparation'
+include { KRAKEN2                                             } from '../modules/local/kraken2'
+include { POOL_SINGLE_READS as POOL_SHORT_SINGLE_READS        } from '../modules/local/pool_single_reads'
+include { POOL_PAIRED_READS                                   } from '../modules/local/pool_paired_reads'
+include { POOL_SINGLE_READS as POOL_LONG_READS                } from '../modules/local/pool_single_reads'
+include { MEGAHIT                                             } from '../modules/local/megahit'
+include { SPADES                                              } from '../modules/local/spades'
+include { SPADESHYBRID                                        } from '../modules/local/spadeshybrid'
+include { QUAST                                               } from '../modules/local/quast'
+include { QUAST_BINS                                          } from '../modules/local/quast_bins'
+include { QUAST_BINS_SUMMARY                                  } from '../modules/local/quast_bins_summary'
+include { CAT_DB                                              } from '../modules/local/cat_db'
+include { CAT_DB_GENERATE                                     } from '../modules/local/cat_db_generate'
+include { CAT                                                 } from '../modules/local/cat'
+include { CAT_SUMMARY                                         } from "../modules/local/cat_summary"
+include { BIN_SUMMARY                                         } from '../modules/local/bin_summary'
+include { COMBINE_TSV as COMBINE_SUMMARY_TSV                  } from '../modules/local/combine_tsv'
 
 ////////////////////////////////////////////////////
 /* --  Create channel for reference databases  -- */
@@ -157,12 +112,6 @@ if (params.gunc_db) {
     ch_gunc_db = file(params.gunc_db, checkIfExists: true)
 } else {
     ch_gunc_db = Channel.empty()
-}
-
-if(params.centrifuge_db){
-    ch_centrifuge_db_file = file(params.centrifuge_db, checkIfExists: true)
-} else {
-    ch_centrifuge_db_file = []
 }
 
 if(params.kraken2_db){
@@ -223,13 +172,20 @@ if(params.metaeuk_db && !params.skip_metaeuk) {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-// Info required for completion email and summary
-def multiqc_report    = []
+// Additional info for completion email and summary
 def busco_failed_bins = [:]
 
 workflow MAG {
 
+    take:
+    ch_raw_short_reads // channel: samplesheet read in from --input
+    ch_raw_long_reads
+    ch_input_assemblies
+
+    main:
+
     ch_versions = Channel.empty()
+    ch_multiqc_files = Channel.empty()
 
     // Get checkM database if not supplied
 
@@ -245,14 +201,8 @@ workflow MAG {
         ch_versions = ch_versions.mix(MMSEQS_DATABASES.out.versions)
     }
 
-    //
-    // SUBWORKFLOW: Read in samplesheet, validate and stage input files
-    //
 
-    INPUT_CHECK ()
-    ch_raw_short_reads  = INPUT_CHECK.out.raw_short_reads
-    ch_raw_long_reads   = INPUT_CHECK.out.raw_long_reads
-    ch_input_assemblies = INPUT_CHECK.out.input_assemblies
+
 
     /*
     ================================================================================
@@ -360,15 +310,23 @@ workflow MAG {
             .groupTuple()
             .branch {
                 meta, reads ->
-                    cat:       ( meta.single_end && reads.size() == 1 ) || ( !meta.single_end && reads.size() >= 2 )
+                    cat:      reads.size() >= 2 // SE: [[meta], [S1_R1, S2_R1]]; PE: [[meta], [[S1_R1, S1_R2], [S2_R1, S2_R2]]]
                     skip_cat: true // Can skip merging if only single lanes
             }
 
         CAT_FASTQ ( ch_short_reads_forcat.cat.map { meta, reads -> [ meta, reads.flatten() ]} )
 
-            ch_short_reads = Channel.empty()
-            ch_short_reads = CAT_FASTQ.out.reads.mix( ch_short_reads_forcat.skip_cat ).map { meta, reads -> [ meta, reads.flatten() ]}
-            ch_versions    = ch_versions.mix(CAT_FASTQ.out.versions.first())
+        // Ensure we don't have nests of nests so that structure is in form expected for assembly
+        ch_short_reads_catskipped = ch_short_reads_forcat.skip_cat
+                                        .map { meta, reads ->
+                                            def new_reads = meta.single_end ? reads[0] : reads.flatten()
+                                        [ meta, new_reads ]
+                                    }
+
+        // Combine single run and multi-run-merged data
+        ch_short_reads = Channel.empty()
+        ch_short_reads = CAT_FASTQ.out.reads.mix(ch_short_reads_catskipped)
+        ch_versions    = ch_versions.mix(CAT_FASTQ.out.versions.first())
 
         if ( params.bbnorm ) {
             if ( params.coassemble_group ) {
@@ -421,11 +379,11 @@ workflow MAG {
 
     if ( !params.assembly_input ) {
         if (!params.skip_adapter_trimming) {
-            PORECHOP (
+            PORECHOP_PORECHOP (
                 ch_raw_long_reads
             )
-            ch_long_reads = PORECHOP.out.reads
-            ch_versions = ch_versions.mix(PORECHOP.out.versions.first())
+            ch_long_reads = PORECHOP_PORECHOP.out.reads
+            ch_versions = ch_versions.mix(PORECHOP_PORECHOP.out.versions.first())
         }
 
         if (!params.keep_lambda) {
@@ -433,7 +391,7 @@ workflow MAG {
                 ch_long_reads,
                 ch_nanolyse_db
             )
-            ch_long_reads = NANOLYSE.out.reads
+            ch_long_reads = NANOLYSE.out.fastq
             ch_versions = ch_versions.mix(NANOLYSE.out.versions.first())
         }
 
@@ -462,36 +420,31 @@ workflow MAG {
                                     Taxonomic information
     ================================================================================
     */
-    if ( !ch_centrifuge_db_file.isEmpty() ) {
-        if ( ch_centrifuge_db_file.extension in ['gz', 'tgz'] ) {
-            // Expects to be tar.gz!
-            ch_db_for_centrifuge = CENTRIFUGE_DB_PREPARATION ( ch_centrifuge_db_file ).db
-        } else if ( ch_centrifuge_db_file.isDirectory() ) {
-            ch_db_for_centrifuge = Channel
-                                    .fromPath( "${ch_centrifuge_db_file}/*.cf" )
-        } else {
-            ch_db_for_centrifuge = Channel.empty()
-        }
-    } else {
+
+    // Centrifuge
+    if ( !params.centrifuge_db ) {
         ch_db_for_centrifuge = Channel.empty()
+    } else {
+        if ( file(params.centrifuge_db).isDirectory() ) {
+            ch_db_for_centrifuge = Channel.of(file(params.centrifuge_db, checkIfExists: true))
+        } else {
+            ch_db_for_centrifuge = CENTRIFUGEDB_UNTAR ( Channel.of([[id: 'db'], file(params.centrifuge_db, checkIfExists: true)])).untar.map{it[1]}.first()
+            ch_versions = ch_versions.mix(CENTRIFUGEDB_UNTAR.out.versions.first())
+        }
     }
 
-    // Centrifuge val(db_name) has to be the basename of any of the
-    //   index files up to but not including the final .1.cf
-    ch_db_for_centrifuge = ch_db_for_centrifuge
-                            .collect()
-                            .map{
-                                db ->
-                                    def db_name = db[0].getBaseName().split('\\.')[0]
-                                    [ db_name, db ]
-                            }
-
-    CENTRIFUGE (
+    CENTRIFUGE_CENTRIFUGE (
         ch_short_reads,
-        ch_db_for_centrifuge
+        ch_db_for_centrifuge,
+        false,
+        false
     )
-    ch_versions = ch_versions.mix(CENTRIFUGE.out.versions.first())
+    ch_versions = ch_versions.mix(CENTRIFUGE_CENTRIFUGE.out.versions.first())
 
+    CENTRIFUGE_KREPORT ( CENTRIFUGE_CENTRIFUGE.out.results, ch_db_for_centrifuge )
+    ch_versions = ch_versions.mix(CENTRIFUGE_KREPORT.out.versions.first())
+
+    // Kraken2
     if ( !ch_kraken2_db_file.isEmpty() ) {
         if ( ch_kraken2_db_file.extension in ['gz', 'tgz'] ) {
             // Expects to be tar.gz!
@@ -526,19 +479,32 @@ workflow MAG {
         if (params.krona_db){
             ch_krona_db = ch_krona_db_file
         } else {
-            KRONA_DB ()
-            ch_krona_db = KRONA_DB.out.db
+            KRONA_KRONADB ()
+            ch_krona_db = KRONA_KRONADB.out.db
+            ch_versions = ch_versions.mix(KRONA_KRONADB.out.versions)
         }
-        ch_tax_classifications = CENTRIFUGE.out.results_for_krona.mix(KRAKEN2.out.results_for_krona)
-            . map { classifier, meta, report ->
-                def meta_new = meta + [classifier: classifier]
-                [ meta_new, report ]
-            }
-        KRONA (
+
+        if ( params.centrifuge_db )  {
+            ch_centrifuge_for_krona = KREPORT2KRONA_CENTRIFUGE ( CENTRIFUGE_KREPORT.out.kreport ).txt.map{ meta, files -> ['centrifuge', meta, files] }
+            ch_versions = ch_versions.mix(KREPORT2KRONA_CENTRIFUGE.out.versions.first())
+        } else {
+            ch_centrifuge_for_krona = Channel.empty()
+        }
+
+        // Join together for Krona
+        ch_tax_classifications = ch_centrifuge_for_krona
+                                    .mix(KRAKEN2.out.results_for_krona)
+                                    .map { classifier, meta, report ->
+                                        def meta_new = meta + [classifier: classifier]
+                                        [ meta_new, report ]
+                                    }
+
+        KRONA_KTIMPORTTAXONOMY (
             ch_tax_classifications,
             ch_krona_db
         )
-        ch_versions = ch_versions.mix(KRONA.out.versions.first())
+        ch_versions = ch_versions.mix(KRONA_KTIMPORTTAXONOMY.out.versions.first())
+
     }
 
     /*
@@ -588,6 +554,7 @@ workflow MAG {
         }
 
         ch_assemblies = Channel.empty()
+
         if (!params.skip_megahit){
             MEGAHIT ( ch_short_reads_grouped )
             ch_megahit_assemblies = MEGAHIT.out.assembly
@@ -663,7 +630,7 @@ workflow MAG {
     } else {
         ch_assemblies_split = ch_input_assemblies
             .branch { meta, assembly ->
-                gzipped: assembly[0].getExtension() == "gz"
+                gzipped: assembly.getExtension() == "gz"
                 ungzip: true
             }
 
@@ -801,8 +768,6 @@ workflow MAG {
                 [meta_new, bins]
             }
 
-
-
         // If any two of the binners are both skipped at once, do not run because DAS_Tool needs at least one
         if ( params.refine_bins_dastool ) {
             ch_prokarya_bins_dastool = ch_binning_results_bins
@@ -839,8 +804,6 @@ workflow MAG {
             } else if ( params.postbinning_input == 'refined_bins_only' ) {
                 ch_input_for_postbinning_bins        = ch_refined_bins
                 ch_input_for_postbinning_bins_unbins = ch_refined_bins.mix(ch_refined_unbins)
-            // TODO REACTIVATE ONCE PR #489 IS READY!
-            // TODO RE-ADD BOTH TO SCHEMA ONCE RE-ADDING
             } else if ( params.postbinning_input == 'both' ) {
                 ch_all_bins = ch_binning_results_bins.mix(ch_refined_bins)
                 ch_input_for_postbinning_bins        = ch_all_bins
@@ -923,7 +886,12 @@ workflow MAG {
 
             QUAST_BINS ( ch_input_for_quast_bins )
             ch_versions = ch_versions.mix(QUAST_BINS.out.versions.first())
-            QUAST_BINS_SUMMARY ( QUAST_BINS.out.quast_bin_summaries.collect() )
+            ch_quast_bin_summary = QUAST_BINS.out.quast_bin_summaries
+                .collectFile(keepHeader: true) {
+                    meta, summary ->
+                    ["${meta.id}.tsv", summary]
+            }
+            QUAST_BINS_SUMMARY ( ch_quast_bin_summary.collect() )
             ch_quast_bins_summary = QUAST_BINS_SUMMARY.out.summary
         }
 
@@ -942,11 +910,25 @@ workflow MAG {
             ch_input_for_postbinning_bins_unbins,
             ch_cat_db
         )
+        // Group all classification results for each sample in a single file
+        ch_cat_summary = CAT.out.tax_classification_names
+            .collectFile(keepHeader: true) {
+                    meta, classification ->
+                    ["${meta.id}.txt", classification]
+            }
+        // Group all classification results for the whole run in a single file
         CAT_SUMMARY(
-            CAT.out.tax_classification_names.collect()
+            ch_cat_summary.collect()
         )
         ch_versions = ch_versions.mix(CAT.out.versions.first())
         ch_versions = ch_versions.mix(CAT_SUMMARY.out.versions)
+
+        // If CAT is not run, then the CAT global summary should be an empty channel
+        if ( params.cat_db_generate || params.cat_db) {
+            ch_cat_global_summary = CAT_SUMMARY.out.combined
+        } else {
+            ch_cat_global_summary = Channel.empty()
+        }
 
         /*
          * GTDB-tk: taxonomic classifications using GTDB reference
@@ -982,7 +964,8 @@ workflow MAG {
                 ch_busco_summary.ifEmpty([]),
                 ch_checkm_summary.ifEmpty([]),
                 ch_quast_bins_summary.ifEmpty([]),
-                ch_gtdbtk_summary.ifEmpty([])
+                ch_gtdbtk_summary.ifEmpty([]),
+                ch_cat_global_summary.ifEmpty([])
             )
         }
 
@@ -1023,23 +1006,48 @@ workflow MAG {
         }
     }
 
-    CUSTOM_DUMPSOFTWAREVERSIONS (
-        ch_versions.unique().collectFile(name: 'collated_versions.yml')
-    )
+    //
+    // Collate and save software versions
+    //
+    softwareVersionsToYAML(ch_versions)
+        .collectFile(
+            storeDir: "${params.outdir}/pipeline_info",
+            name: 'nf_core_pipeline_software_mqc_versions.yml',
+            sort: true,
+            newLine: true
+        ).set { ch_collated_versions }
 
     //
     // MODULE: MultiQC
     //
-    workflow_summary    = WorkflowMag.paramsSummaryMultiqc(workflow, summary_params)
-    ch_workflow_summary = Channel.value(workflow_summary)
+    ch_multiqc_config        = Channel.fromPath(
+        "$projectDir/assets/multiqc_config.yml", checkIfExists: true)
+    ch_multiqc_custom_config = params.multiqc_config ?
+        Channel.fromPath(params.multiqc_config, checkIfExists: true) :
+        Channel.empty()
+    ch_multiqc_logo          = params.multiqc_logo ?
+        Channel.fromPath(params.multiqc_logo, checkIfExists: true) :
+        Channel.fromPath("${workflow.projectDir}/docs/images/mag_logo_mascot_light.png", checkIfExists: true)
 
-    methods_description    = WorkflowMag.methodsDescriptionText(workflow, ch_multiqc_custom_methods_description, params)
-    ch_methods_description = Channel.value(methods_description)
+    summary_params      = paramsSummaryMap(
+        workflow, parameters_schema: "nextflow_schema.json")
+    ch_workflow_summary = Channel.value(paramsSummaryMultiqc(summary_params))
 
-    ch_multiqc_files = Channel.empty()
-    ch_multiqc_files = ch_multiqc_files.mix(ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
-    ch_multiqc_files = ch_multiqc_files.mix(CUSTOM_DUMPSOFTWAREVERSIONS.out.mqc_yml.collect())
-    ch_multiqc_files = ch_multiqc_files.mix(ch_methods_description.collectFile(name: 'methods_description_mqc.yaml'))
+    ch_multiqc_custom_methods_description = params.multiqc_methods_description ?
+        file(params.multiqc_methods_description, checkIfExists: true) :
+        file("$projectDir/assets/methods_description_template.yml", checkIfExists: true)
+    ch_methods_description                = Channel.value(
+        methodsDescriptionText(ch_multiqc_custom_methods_description))
+
+    ch_multiqc_files = ch_multiqc_files.mix(
+        ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
+    ch_multiqc_files = ch_multiqc_files.mix(ch_collated_versions)
+    ch_multiqc_files = ch_multiqc_files.mix(
+        ch_methods_description.collectFile(
+            name: 'methods_description_mqc.yaml',
+            sort: true
+        )
+    )
 
     ch_multiqc_files = ch_multiqc_files.mix(FASTQC_RAW.out.zip.collect{it[1]}.ifEmpty([]))
 
@@ -1067,7 +1075,7 @@ workflow MAG {
 
     }
 
-    ch_multiqc_files = ch_multiqc_files.mix(CENTRIFUGE.out.kreport.collect{it[1]}.ifEmpty([]))
+    ch_multiqc_files = ch_multiqc_files.mix(CENTRIFUGE_KREPORT.out.kreport.collect{it[1]}.ifEmpty([]))
     ch_multiqc_files = ch_multiqc_files.mix(KRAKEN2.out.report.collect{it[1]}.ifEmpty([]))
 
     if (!params.skip_quast){
@@ -1098,24 +1106,9 @@ workflow MAG {
         ch_multiqc_logo.toList()
     )
 
-    multiqc_report = MULTIQC.out.report.toList()
-}
-
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    COMPLETION EMAIL AND SUMMARY
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
-
-workflow.onComplete {
-    if (params.email || params.email_on_fail) {
-        NfcoreTemplate.email(workflow, params, summary_params, projectDir, log, multiqc_report, busco_failed_bins)
-    }
-    NfcoreTemplate.dump_parameters(workflow, params)
-    NfcoreTemplate.summary(workflow, params, log, busco_failed_bins)
-    if (params.hook_url) {
-        NfcoreTemplate.IM_notification(workflow, params, summary_params, projectDir, log)
-    }
+    emit:
+    multiqc_report = MULTIQC.out.report.toList() // channel: /path/to/multiqc_report.html
+    versions       = ch_versions                 // channel: [ path(versions.yml) ]
 }
 
 /*
